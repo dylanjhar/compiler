@@ -33,14 +33,16 @@ public:
 //		}
 	}
 
-
-	void scanFile(istream& infile, ostream& outfile);
 	//pre: 1st parameter refers to an open text file that contains source
 	//	   code in the language, 2nd parameter refers to an open empty output file
 	//post: If no error, the token and lexeme pairs for the given input
 	//		file have been written to the output file and the vectors have been populated.
 	// 		If there is an error, incomplete token/lexeme pairs are written to the output file and populated in the vectors.
 	//		An error message is also written to the file. A success or fail message has printed to the console.
+	void scanFile(istream& infile, ostream& outfile) {
+
+	}
+
 };
 
 //pre:
@@ -61,6 +63,19 @@ ifstream infilePrompt(string fileName) {
 int main() {
 	ifstream tlpFile = infilePrompt("token lexeme pair");
 	LexAnalyzer lex(tlpFile);
+
+	ifstream srcFile = infilePrompt("source code");
+
+	string file;
+	cout << "enter the output file: ";
+	cin >> file;
+	ofstream outFile(file);
+		if(!outFile) {
+			cout << "unable to get file" << endl;
+			exit(-1);
+		}
+
+	lex.scanFile(srcFile, outFile);
 
 	return 0;
 }
