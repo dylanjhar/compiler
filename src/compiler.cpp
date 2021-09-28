@@ -38,12 +38,45 @@ public:
 
 	//pre: 1st parameter refers to an open text file that contains source
 	//	   code in the language, 2nd parameter refers to an open empty output file
-	//post: If no error, the token and lexeme pairs for the given input
-	//		file have been written to the output file and the vectors have been populated.
+	//post: If no error, the token and lexeme pairs for the given input file
+	//		have been written to the output file and the vectors have been populated.
 	// 		If there is an error, incomplete token/lexeme pairs are written to the output file and populated in the vectors.
 	//		An error message is also written to the file. A success or fail message has printed to the console.
 	void scanFile(istream& infile, ostream& outfile) {
+		char ch;
+		string lexeme = "";
+		map<string, string>::iterator mitr;
 
+		infile.get(ch);
+		while(ch == ' ') {
+			infile.get(ch);
+		}
+		lexeme.push_back(ch);
+		for(mitr = tokenmap.begin(); mitr != tokenmap.end(); ++mitr) {
+			if(lexeme == mitr->second) {
+				tokens.push_back(mitr->first);
+				lexemes.push_back(mitr->second);
+				lexeme = "";
+			}
+		}
+		while(!infile.eof()) {
+			infile.get(ch);
+			while(ch == ' ') {
+				infile.get(ch);
+			}
+			lexeme.push_back(ch);
+			for(mitr = tokenmap.begin(); mitr != tokenmap.end(); ++mitr) {
+				if(lexeme == mitr->second) {
+					tokens.push_back(mitr->first);
+					lexemes.push_back(mitr->second);
+					lexeme = "";
+				}
+			}
+		}
+		vector<string>::iterator vitr;
+		for(vitr = tokens.begin(); vitr != tokens.end(); ++vitr) {
+			cout << *vitr << endl;
+		}
 	}
 
 };
