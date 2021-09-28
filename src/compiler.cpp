@@ -24,7 +24,10 @@ public:
 	//post: tokenmap has been populated
 	LexAnalyzer(istream& infile) {
 		string key, value;
-		while(infile >> key >> value) {
+		infile >> key >> value;
+		tokenmap[key] = value;
+		while(!infile.eof()) {
+			infile >> key >> value;
 			tokenmap[key] = value;
 		}
 //		map<string, string>::iterator mitr;
