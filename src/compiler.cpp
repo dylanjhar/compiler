@@ -2,7 +2,8 @@
 // Name        : compiler.cpp
 // Assignment  : #2
 // Author      : Dylan Harper
-// Description : The first part of a compiler, the lexical analyzer
+// Description : The first part of a compiler, the lexical analyzer which scans
+//				 source code for validity and outputs the scan results
 //============================================================================
 
 #include <iostream>
@@ -18,6 +19,132 @@ private:
 	vector<string> tokens;   // source code file tokens
 	map<string, string> tokenmap;  // valid lexeme/token pairs
 
+	//pre: param is an open output file
+	//post: lexemes and tokens vectors are written to output file
+	void print(ostream& outfile) {
+		vector<string>::iterator vitr;
+		int i = 0;
+		for(vitr = tokens.begin(); vitr != tokens.end(); ++vitr) {
+			outfile << *vitr << " : " << lexemes[i] << endl;
+			i++;
+		}
+	}
+
+	//pre: first param is open input file with source code, second param is open output file,
+	//	   third param is the current character in the input file, fourth param contains
+	//	   the supposed lexeme in the input file
+	//post: if valid int lexeme, vectors are populated with token/lexeme and if not, error message
+	//		is printed to console as well as the output file, print() is called
+	void intDetect(istream& infile, ostream& outfile, char& ch, string& lexeme) {
+		lexeme.push_back(ch);
+		infile.get(ch);
+		while(!infile.eof() && isdigit(ch)) {
+			lexeme.push_back(ch);
+			infile.get(ch);
+		}
+		if(isalpha(ch)) {
+			outfile << "error - integers can only consist of numbers/IDs cannot begin with a number" << endl;
+			print(outfile);
+			cout << "error - program scan not completed" << endl;
+			exit(-1);
+		} else {
+			tokens.push_back("t_int");
+			lexemes.push_back(lexeme);
+			lexeme = "";
+		}
+	}
+
+	//pre: first param is open input file with source code, second param is open output file,
+	//	   third param is the current character in the input file, fourth param contains
+	//	   the supposed lexeme in the input file
+	//post: if valid string, vectors are populated with token/lexeme and if not, error message
+	//		is printed to console as well as the output file, print() is called
+	void strDetect(istream& infile, ostream& outfile, char& ch, string& lexeme) {
+		lexeme.push_back(ch);
+		infile.get(ch);
+		while(!infile.eof() && ch != '"') {
+			lexeme.push_back(ch);
+			infile.get(ch);
+		}
+		if(ch != '"') {
+			outfile << "error - string must be enclosed in double quotes" << endl;
+			print(outfile);
+			cout << "error - program scan not completed" << endl;
+			exit(-1);
+		} else {
+			lexeme.push_back(ch);
+			tokens.push_back("t_str");
+			lexemes.push_back(lexeme);
+			lexeme = "";
+			infile.get(ch);
+		}
+	}
+
+	//pre: first param is open input file with source code, second param is open output file,
+	//	   third param is the current character in the input file, fourth param contains
+	//	   the supposed lexeme in the input file
+	//post: if valid token, vectors are populated with token/lexeme
+	void lexemeDetect(istream& infile, ostream& outfile, char& ch, string& lexeme) {
+		map<string, string>::iterator mitr;
+
+		lexeme.push_back(ch);
+		infile.get(ch);
+		if(!isalpha(lexeme[0]) && ch == '=') {
+			lexeme.push_back(ch);
+			infile.get(ch);
+		}
+		for(mitr = tokenmap.begin(); mitr != tokenmap.end() && lexeme != ""; ++mitr) {
+			if(lexeme == mitr->second) {
+				tokens.push_back(mitr->first);
+				lexemes.push_back(mitr->second);
+				lexeme = "";
+			}
+		}
+		if(lexeme != "") {
+			while(!infile.eof() && lexeme != "" && ch != '=' && ch != ' ' && ch != '\n' && ch != '\t') {
+				lexeme.push_back(ch);
+				for(mitr = tokenmap.begin(); mitr != tokenmap.end() && lexeme != ""; ++mitr) {
+					if(lexeme == mitr->second) {
+						tokens.push_back(mitr->first);
+						lexemes.push_back(mitr->second);
+						lexeme = "";
+					}
+				}
+				infile.get(ch);
+			}
+		}
+	}
+
+	//pre: first param is open input file with source code, second param is open output file,
+	//	   third param is the current character in the input file, fourth param contains
+	//	   the supposed lexeme in the input file
+	//post: if valid id, vectors are populated with token/lexeme and if not, error message
+	//		is printed to console as well as the output file, print() is called
+	void idDetect(istream& infile, ostream& outfile, char& ch, string& lexeme) {
+		if(lexeme != "" && isalpha(lexeme[0])) {
+			while(!infile.eof() && (isalpha(ch) || isdigit(ch)) && ch != ' ' && ch != '\n' && ch != '\t') {
+				lexeme.push_back(ch);
+				infile.get(ch);
+			}
+			for(int i = 1; i < lexeme.length(); i++) {
+				if(!isdigit(lexeme[i]) && !isalpha(lexeme[i])) {
+					outfile << "error - IDs must consist of only letters and numbers" << endl;
+					print(outfile);
+					cout << "error - program scan not completed" << endl;
+					exit(-1);
+				}
+			}
+			tokens.push_back("t_id");
+			lexemes.push_back(lexeme);
+			lexeme = "";
+		} else if(lexeme != "") {
+			outfile << "error - not a valid lexeme" << endl;
+			print(outfile);
+			cout << "error - program scan not completed" << endl;
+			exit(-1);
+		}
+	}
+
 public:
 	//pre: parameter refers to open data file consisting of token and lexeme pairs i.e.  s_and and t_begin begin t_int 27.
 	//	   Each pair appears on its own input line.
@@ -30,10 +157,6 @@ public:
 			infile >> key >> value;
 			tokenmap[key] = value;
 		}
-//		map<string, string>::iterator mitr;
-//		for(mitr = tokenmap.begin(); mitr != tokenmap.end(); ++mitr) {
-//			cout << mitr->first << " " << mitr->second << endl;
-//		}
 	}
 
 	//pre: 1st parameter refers to an open text file that contains source
@@ -45,44 +168,33 @@ public:
 	void scanFile(istream& infile, ostream& outfile) {
 		char ch;
 		string lexeme = "";
-		map<string, string>::iterator mitr;
 
 		infile.get(ch);
-		while(ch == ' ') {
+		while(ch == ' ' || ch == '\n' || ch == '\t') {
 			infile.get(ch);
 		}
-		lexeme.push_back(ch);
-		for(mitr = tokenmap.begin(); mitr != tokenmap.end(); ++mitr) {
-			if(lexeme == mitr->second) {
-				tokens.push_back(mitr->first);
-				lexemes.push_back(mitr->second);
-				lexeme = "";
-			}
-		}
+
 		while(!infile.eof()) {
-			infile.get(ch);
-			while(ch == ' ') {
+			if(isdigit(ch)) {
+				intDetect(infile, outfile, ch, lexeme);
+			} else if(ch == '"') {
+				strDetect(infile, outfile, ch, lexeme);
+			} else {
+				lexemeDetect(infile, outfile, ch, lexeme);
+				idDetect(infile, outfile, ch, lexeme);
+			}
+			while(!infile.eof() && (ch == ' ' || ch == '\n' || ch == '\t')) {
 				infile.get(ch);
 			}
-			lexeme.push_back(ch);
-			for(mitr = tokenmap.begin(); mitr != tokenmap.end(); ++mitr) {
-				if(lexeme == mitr->second) {
-					tokens.push_back(mitr->first);
-					lexemes.push_back(mitr->second);
-					lexeme = "";
-				}
-			}
 		}
-		vector<string>::iterator vitr;
-		for(vitr = tokens.begin(); vitr != tokens.end(); ++vitr) {
-			cout << *vitr << endl;
-		}
+		print(outfile);
+		cout << "program scan complete" << endl;
 	}
 
 };
 
-//pre:
-//post:
+//pre: param is apart of the prompt telling user what file to enter
+//post: infile is returned with file that user entered
 ifstream infilePrompt(string fileName) {
 	string file;
 	cout << "enter the " << fileName << " file: ";
